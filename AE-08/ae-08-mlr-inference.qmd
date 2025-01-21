@@ -1,0 +1,185 @@
+---
+title: "AE 08: Inference for Multiple Linear Regression"
+subtitle: "Rail Trails"
+editor: visual
+format:
+  html:
+    embed-resources: true
+---
+
+::: callout-important
+-   Open [RStudio](https://rstudio.collegeofidaho.edu/) and create a subfolder in your AE folder called "AE-08".
+
+-   Go to the [Canvas](https://cofi.instructure.com/courses/17093/assignments/202839) and locate your `AE-08` assignment to get started.
+
+-   Upload the `ae-08.qmd` and `rail-trail.csv` files into the folder you just created.
+:::
+
+## Packages + data
+
+```{r load-packages}
+#| message: false
+library(tidyverse)
+library(ggformula)
+library(broom)
+library(knitr)
+library(mosaic)
+library(mosaicData)
+
+rail_trail <- read_csv("~/MAT-212/AE-08/rail_trail.csv")
+head(rail_trail)
+```
+
+The data for this AE is based on data from the Pioneer Valley Planning Commission (PVPC) and is included in the **mosaicData** package. The PVPC collected data for ninety days from April 5, 2005 to November 15, 2005. Data collectors set up a laser sensor, with breaks in the laser beam recording when a rail-trail user passed the data collection station. More information can be found [here](http://www.fvgreenway.org), [here](https://www.trafx.net/), and [here](https://fchtrail.org/wp-content/uploads/2021/07/FVTC-Trail-Usage-Study-2013-15.pdf).
+
+**Response**
+
+-   `volume`: Number bikes that broke the laser beam
+
+## Analysis goal
+
+The goals of this activity are to:
+
+-   Perform inference for multiple linear regression
+-   Conduct/interpret hypothesis tests
+-   Construct/interpret confidence intervals
+-   Determine whether the conditions for inference are satisfied in this multi-predictor setting.
+
+## Exercise 0
+
+Import `GGally` and use `ggpairs` to plot all combinations of variables.
+
+```{r}
+library(GGally)
+
+rail_trail |> ggpairs()
+```
+
+## Exercise 1
+
+Choose two explanatory variables which you think will best predict `Volume` based on the plot above. Write your two variables on the board. You may not use the same combination as another group. If you choose a temperature, only select one.
+
+High Temperature and Day type
+
+## Exercise 2
+
+Fit and display two linear regression models predicting `volume` from the two predictors you chose. In one, include an interaction term between the two variables and in the other, do not.
+
+```{r}
+
+
+rail_fitr <- lm(volume ~ hightemp + day_type, data = rail_trail)
+tidy(rail_fitr) |> kable()
+
+```
+
+```{r}
+# library(mosaic)
+# p1 <- plotModel(lm(volume ~ hightemp*day_type, data = rail_trail))
+# p2 <- plotModel(lm(volume ~ hightemp*day_type, data = rail_trail %>% mutate(volume = shuffle(volume))))
+# p1 + p2
+```
+
+## Exercise 3
+
+Consider the model *without* an interaction term. Perform a hypothesis test on one of your explanatory variables (fill in the blanks where appropriate:
+
+1.  **Set hypothesis:** $H_0: \beta_{1} = 0$ vs. $H_A: \beta_{1} \neq 0$, given day_type is in the model. Restate these hypothesis in words: The null hypothesis states that there is no relationship between high_temp and volume given that day_type is in the model.
+
+    The alternative hypothesis states that there is a relationship between high_temp and volume given that day_type is in the model.
+
+2.  **Calculate test statistics and p-value:** The test statistic is $6.319064$. The p-value is $0$.
+
+3.  **State the conclusion:** According to p value, we have a strong evidence to reject null hypothesis.
+
+## Exercise 4
+
+Consider the model *with* an interaction term. Interpret the the p-value associated with the interaction term.
+
+```{r}
+rail_fit <- lm(volume ~ hightemp + day_type + hightemp * day_type, data = rail_trail)
+tidy(rail_fit) 
+```
+
+There is a strong relationship between high temp and volume even when the interaction term because the term has high p value.
+
+## Exercise 5
+
+Generate 95% confidence intervals for the model *without* an interaction term. Hint: use the `tidy` function with the argument `conf.int = TRUE`. Interpret the confidence interval for the same explanatory variable as Exercise 3 and explain why the combination of p-value and confidence interval makes sense.
+
+```{r}
+tidy(rail_fitr, conf.int = TRUE,level = 0.95)
+```
+
+We are 95% confident that the slope we get from rail_fitr will fall between 3.665706 to 7.029927.
+
+## Exercise 6
+
+What does it mean for two things to be **independent** in statistics (feel free to use Google)? Do we think our p-values/confidence intervals are **independent** across variables?
+
+## Exercise 7
+
+::: callout-important
+If the intercept term was significant, use that model for the rest of this activity, otherwise use the model without the interaction term.
+:::
+
+Generate a scatter plot of the residuals vs. the fitted values for this model.
+
+```{r}
+rail_aug <- augment(rail_fitr)
+
+gf_point(.resid ~ .fitted, data = rail_aug) |>
+  gf_hline(yintercept = 0) |>
+  gf_labs(x = "fitted values", y = "residual values", title = "residual vs fitted values")
+```
+
+## Exercise 8
+
+Plot the residuals vs. each of your predictors (two plots total).
+
+```{r}
+gf_point(.resid ~ hightemp, data= rail_fitr)|>
+  gf_labs(x = "hightemp", y = "residual values", title = "residual vs hightemp")
+gf_boxplot(.resid ~ day_type, data= rail_fitr) |>
+  gf_labs(x = "day_type", y = "residual values", title = "residual vs day_type")
+
+```
+
+## Exercise 9
+
+Based on the three plots you've made, do you think the linearity condition is satisfied?
+
+Maybe. Even if we see the linearity then the linearity score will be low maybe around 0.3.
+
+## Exercise 10
+
+We check the constant variance assumption in the same way we do with SLR. To what extent does the constant variance condition seem to be satisfied?
+
+It is not satisfied. We observed curves around the edges.
+
+## Exercise 11
+
+Generate a histogram and QQ-plot of the residuals. To what extent do you believe the normality condition is satisfied?
+
+```{r}
+gf_qq(~.resid, data = rail_aug) |>
+  gf_qqline()
+
+gf_histogram(~.resid, data = rail_aug)
+  
+```
+
+In this context, we observed that the normality condition is somewhat met (medium rare- Sadie).
+
+## Exercise 12
+
+How do you think would you go about checking the independence condition?
+
+We would look at how the data was collected. looking at it, we see a lot more spring data this could cause a few problems in inference but not in the linear model. therefore, it is good.
+
+## To submit the AE
+
+::: callout-important
+-   Render the document to produce the HTML file with all of your work from today's class.
+-   Upload your QMD and HTML files to the Canvas assignment.
+:::

@@ -1,0 +1,197 @@
+---
+title: "AE 09: Logistic regression introduction"
+editor: visual
+format:
+  html:
+    embed-resources: true
+---
+
+::: callout-important
+-   Open [RStudio](https://rstudio.collegeofidaho.edu/) and create a subfolder in your AE folder called "AE-09".
+
+-   Go to the [Canvas](https://cofi.instructure.com/courses/17093/assignments/202847) and locate your `AE-09` assignment to get started.
+
+-   Upload the `ae-09.qmd` and `framingham.csv` files into the folder you just created.
+:::
+
+## Packages
+
+```{r}
+#| label: load-pkgs-data
+#| message: false
+ 
+library(tidyverse)
+library(broom)
+library(ggformula)
+library(mosaic)
+library(knitr)
+library(ggforce)
+
+heart_disease <- read_csv("~/MAT-212/AE-09/framingham.csv") |>
+  select(totChol, TenYearCHD, age, BMI, cigsPerDay, heartRate)
+```
+
+### Data: Framingham study
+
+This data set is from an ongoing cardiovascular study on residents of the town of Framingham, Massachusetts. We want to use the total cholesterol to predict if a randomly selected adult is high risk for heart disease in the next 10 years.
+
+### Response variable
+
+-   `TenYearCHD`:
+    -   1: Patient developed heart disease within 10 years of exam
+    -   0: Patient did not develop heart disease within 10 years of exam
+
+### What's my predictor variable?
+
+Based on your group, use the following as your predictor variable.
+
+-   Group 1 - `totChol`: total cholesterol (mg/dL)
+-   Group 2 -`BMI`: patient's body mass index
+-   Group 3 -`cigsPerDay`: number of cigarettes patient smokes per day
+-   Group 4 -`heartRate`: Heart rate (beats per minute)
+
+## Exercise 0
+
+Look up the `drop_na` function. Describe how it works. Drop any rows with missing data in `TenYearCHD` or your aassigned predictor.
+
+```{r}
+#glimpse(heart_disease)
+heart_updated <- drop_na(heart_disease, TenYearCHD, cigsPerDay)
+```
+
+## Exercise 1
+
+Generate a plot and table of `TenYearCHD`, and a plot to visualize the relationship between `TenYearCHD` and `totChol`. Hint: none of these should be scatterplots.
+
+```{r}
+gf_boxplot(factor(TenYearCHD) ~ cigsPerDay , data= heart_updated)
+table(heart_updated$TenYearCHD)
+```
+
+## Exercise 2
+
+Generate a scatterplot of `totChol` vs. `TenYearCHD`. Use `gf_lm()` to add a line to your plot. Do you think this is a good model? Why or why not?
+
+```{r}
+gf_point(TenYearCHD ~ cigsPerDay, data = heart_updated) |>
+  gf_lm()
+```
+
+## Exercise 3
+
+State whether a linear regression model or logistic regression model is more appropriate for each of your research projects.
+
+shubha = logistic regression
+
+aayush = logistic regression
+
+## Exercise 4
+
+Using the table you generated in Exercise 1 (answer 1-3 on the board):
+
+0.  Based on our data, what is considered "success"?
+
+    -   1: Patient developed heart disease within 10 years of exam
+
+1.  What is the probability a randomly selected person will be a "success"?
+
+    ```{r}
+    642 / (3569+642)
+
+    ```
+
+2.  What are the **odds** a randomly selected person will be a "success"?
+
+    ```{r}
+    642 / 3569
+    ```
+
+    for everytime 0 is a success, 1 is success 0.1798823 times.
+
+3.  What are the **log-odds** a randomly selected person will be a "success"?
+
+    ```{r}
+    log(642 / 3569)
+    ```
+
+## Exercise 5
+
+On the whiteboard, show that the formula for log-odds (see the slide) corresponds with the formula of probability on the slide.
+
+done\\
+
+## Exercise 6
+
+Generate a plot of `TenYearCHD` vs. your groups predictor variable. Based on this plot, what do you think the relationship between this variable and `TenYearCHD` is?
+
+```{r}
+heart_updated |> 
+gf_boxplot(cigsPerDay ~ factor(TenYearCHD), fill = "steelblue") |> 
+  gf_sina(size = 0.75, alpha=0.75) |> 
+  gf_labs(x = "TenYearCHD - 1: yes, 0: no",
+       y = "cigsPerDay", 
+       title = "cigsPerDay vs. TenYearCHD")
+```
+
+The data points are clustered around general integers like 0, 5, 10,20 which signifies that people randomly guess the number of cigarettes per day. also we observe generally people smoke 0-20 cigarettes per day. Also, most of the patient who did not develop heart disease within 10 years of exam smoked less cigarettes than the other ones.
+
+## Exercise 7
+
+Fit a logistic regression model predicting the probability of developing heart disease within the next 10 years from your assigned predictor. Have your reporter write your model on the white board in both the logistic and probability form. Interpret the coefficient of your predictor in context.
+
+for every unit increase in the cigs pre day, the log_odds decreases by 1.83.
+
+```{r}
+heart_disease_fit <- glm(TenYearCHD ~ cigsPerDay, data = heart_updated, family = "binomial")
+
+tidy(heart_disease_fit) |> kable()
+```
+
+## Exercise 8
+
+Look at the first row in `heart_disease`, what log-odds and probability would you predict for this observation. Find your response variable and plug it into the model you just wrote down. Only use the `exp` function along with addition, subtraction, multiplication, and division to compute your estimate.
+
+prediction : 0.1394339
+
+log_odds: -1.83
+
+```{r}
+head(heart_disease, n = 1)
+exp(-1.82+0.012*0)/ (1+exp(-1.82+0.012*0))
+-1.83+ 0.012*0
+
+                     
+```
+
+## Exercise 9
+
+1.  Use `predict` to generate a vector of predicted probability for the whole data set.
+
+    ```{r}
+    predict(heart_disease_fit, newdata = heart_updated, type = "response") |> 
+      head() |> kable(digits = 3)
+    ```
+
+2.  Use `mutate` to add this vector of predicted probabilities to the original data set.
+
+    ```{r}
+    heart_updated <- heart_updated |>
+      mutate(predict_probab = predict(heart_disease_fit, newdata = heart_updated, type = "response") )
+             
+    heart_updated
+    ```
+
+3.  Plot the predicted probabilities against your explanatory variable.
+
+    ```{r}
+    gf_point(predict_probab ~ cigsPerDay, data = heart_updated) 
+    ```
+
+## Submission
+
+::: callout-important
+To submit the AE:
+
+-   Render the document to produce the HTML file with all of your work from today's class.
+-   Upload your QMD and HTML files to the Canvas assignment.
+:::
